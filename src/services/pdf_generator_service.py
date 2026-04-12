@@ -4,6 +4,9 @@ from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER
+from reportlab.graphics import renderPDF
+from reportlab.graphics.charts.piecharts import Pie
+from reportlab.graphics.shapes import Drawing
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
@@ -43,6 +46,9 @@ class PdfGeneratorService:
             y = self.page_height - self.margin_top
 
             def new_page() -> float:
+                nonlocal page_counter
+                draw_footer(page_counter)
+                page_counter += 1
                 pdf.showPage()
                 return self.page_height - self.margin_top
 
@@ -70,6 +76,10 @@ class PdfGeneratorService:
                 if isinstance(value, bool):
                     return "Sí" if value else "No"
                 return str(value)
+
+            def safe_optional_value(value: Any) -> str:
+                text = safe_value(value).strip()
+                return text if text else "Sin información disponible"
 
             def draw_wrapped_text(
                 text: str,
@@ -120,7 +130,7 @@ class PdfGeneratorService:
 
                 pdf.setFillColor(colors.white)
                 pdf.setFont("Helvetica-Bold", 17)
-                pdf.drawString(left + 16, top - 28, "Informe de Cumplimiento ESG")
+                pdf.drawString(left + 16, top - 28, "Informe de Cumplimiento ASG")
 
                 pdf.setFont("Helvetica", 10)
                 pdf.drawString(left + 16, top - 46, f"Solicitud: {safe_value(payload.get('request_id'))}")
@@ -130,7 +140,7 @@ class PdfGeneratorService:
                 pdf.setFont("Helvetica-Bold", 9)
                 pdf.drawRightString(left + width - 16, top - 46, "Evaluación de Proveedor")
 
-                return top - band_h - 18
+                return top - band_h - 28
 
             def draw_section_title(title: str, current_y: float) -> float:
                 current_y = ensure_space(current_y, 28)
@@ -141,7 +151,7 @@ class PdfGeneratorService:
                 pdf.setStrokeColor(self.palette["gray_200"])
                 pdf.setLineWidth(1)
                 pdf.line(self.margin_x, current_y - 5, self.page_width - self.margin_x, current_y - 5)
-                return current_y - 20
+                return current_y - 24
 
             def draw_key_values(items: list[tuple[str, str]], current_y: float) -> float:
                 card_h = max(56, (len(items) * 16) + 16)
@@ -203,7 +213,8 @@ class PdfGeneratorService:
                 gap = 10
                 total_w = self.page_width - (self.margin_x * 2)
                 box_w = (total_w - (gap * 2)) / 3
-                needed_h = (box_h * 2) + gap + 6
+                chart_h = 170
+                needed_h = (box_h * 2) + gap + 16 + chart_h
                 current_y = ensure_space(current_y, needed_h)
 
                 left = self.margin_x
@@ -211,8 +222,8 @@ class PdfGeneratorService:
 
                 values = [
                     ("Total criterios", safe_value(metrics.get("total_criteria", 0)), "neutral"),
-                    ("Cumplen", safe_value(metrics.get("has_compliance", 0)), "positive"),
-                    ("No cumplen", safe_value(metrics.get("has_no_compliance", 0)), "neutral"),
+                    ("Tienen", safe_value(metrics.get("has_compliance", 0)), "positive"),
+                    ("No tienen", safe_value(metrics.get("has_no_compliance", 0)), "neutral"),
                     ("Verificados", safe_value(metrics.get("verified_criteria", 0)), "positive"),
                     (
                         "Archivos verificadores",
@@ -233,7 +244,66 @@ class PdfGeneratorService:
                     box_top = top - (row * (box_h + gap))
                     draw_metric_box(x, box_top, box_w, box_h, title, value, tone)
 
-                return top - needed_h - 6
+                chart_top = top - ((box_h * 2) + gap) - 18
+                indicators = payload.get("indicators")
+                if isinstance(indicators, dict):
+                    reported_value = indicators.get("reported_compliance_level")
+                    verified_value = indicators.get("verified_compliance_level")
+                else:
+                    reported_value = None
+                    verified_value = None
+
+                has_indicator_values = isinstance(reported_value, (int, float)) and isinstance(verified_value, (int, float))
+
+                if has_indicator_values:
+                    reported_value = max(0, min(100, float(reported_value)))
+                    verified_value = max(0, min(100, float(verified_value)))
+                    remainder = max(0.0, 100.0 - max(reported_value, verified_value))
+
+                    drawing = Drawing(total_w, chart_h)
+                    pie = Pie()
+                    pie.x = 16
+                    pie.y = 22
+                    pie.width = 120
+                    pie.height = 120
+                    pie.slices.strokeWidth = 0
+                    pie.data = [reported_value, verified_value, remainder]
+                    pie.slices[0].fillColor = self.palette["navy_soft"]
+                    pie.slices[1].fillColor = self.palette["green"]
+                    pie.slices[2].fillColor = self.palette["gray_200"]
+                    pie.labels = ["", "", ""]
+                    drawing.add(pie)
+
+                    renderPDF.draw(drawing, pdf, self.margin_x, chart_top - chart_h)
+
+                    legend_x = self.margin_x + 160
+                    legend_y = chart_top - 20
+
+                    pdf.setFillColor(self.palette["gray_900"])
+                    pdf.setFont("Helvetica-Bold", 10)
+                    pdf.drawString(legend_x, legend_y, "Indicadores de cumplimiento")
+
+                    legend_items = [
+                        ("Cumplimiento declarado", f"{reported_value:.0f}%", self.palette["navy_soft"]),
+                        ("Cumplimiento verificado", f"{verified_value:.0f}%", self.palette["green"]),
+                    ]
+                    row_y = legend_y - 18
+                    for label, value, color in legend_items:
+                        pdf.setFillColor(color)
+                        pdf.circle(legend_x + 4, row_y + 2, 4, stroke=0, fill=1)
+                        pdf.setFillColor(self.palette["gray_700"])
+                        pdf.setFont("Helvetica", 9)
+                        pdf.drawString(legend_x + 14, row_y, label)
+                        pdf.setFillColor(self.palette["gray_900"])
+                        pdf.setFont("Helvetica-Bold", 9)
+                        pdf.drawRightString(self.page_width - self.margin_x, row_y, value)
+                        row_y -= 16
+                else:
+                    pdf.setFillColor(self.palette["gray_700"])
+                    pdf.setFont("Helvetica", 10)
+                    pdf.drawString(self.margin_x, chart_top - 28, "Sin información disponible")
+
+                return top - needed_h - 8
 
             def draw_status_pill(x: float, y_top: float, label: str, kind: str) -> None:
                 if kind == "ok":
@@ -266,11 +336,11 @@ class PdfGeneratorService:
                 }
                 return mapping.get(candidate, raw_type if raw_type else "Otros")
 
-            def draw_criterion_item(item: dict[str, Any], idx: int, current_y: float) -> float:
+            def draw_criterion_item(item: dict[str, Any], current_y: float) -> float:
                 checker_files = item.get("checker_files", [])
                 file_names = [f.get("file_name", "") for f in checker_files if isinstance(f, dict) and f.get("file_name")]
 
-                dynamic_h = 112 + (len(file_names) * 13)
+                dynamic_h = 102 + (len(file_names) * 13)
                 current_y = ensure_space(current_y, dynamic_h)
 
                 left = self.margin_x
@@ -282,16 +352,12 @@ class PdfGeneratorService:
                 pdf.setStrokeColor(self.palette["gray_200"])
                 pdf.roundRect(left, top - height, width, height, 6, fill=1, stroke=1)
 
-                pdf.setFillColor(self.palette["gray_700"])
-                pdf.setFont("Helvetica-Bold", 9)
-                pdf.drawString(left + 12, top - 18, f"CRITERIO {idx:02d}")
-
                 compliance_value = safe_value(item.get("compliance", "")).strip().lower()
                 if compliance_value == "tiene":
-                    compliance_label = "Cumple"
+                    compliance_label = "Tiene"
                     compliance_kind = "ok"
                 elif compliance_value == "no tiene":
-                    compliance_label = "No cumple"
+                    compliance_label = "No tiene"
                     compliance_kind = "error"
                 else:
                     compliance_label = "En revisión"
@@ -305,9 +371,9 @@ class PdfGeneratorService:
                 draw_status_pill(left + width - 84, top - 12, verification_label, verification_kind)
 
                 pdf.setFillColor(self.palette["gray_900"])
-                pdf.setFont("Helvetica-Bold", 10)
+                pdf.setFont("Helvetica-Bold", 11)
                 title = safe_value(item.get("title", "Sin título"))
-                y_text = draw_wrapped_text(title, left + 12, top - 36, width - 24, "Helvetica-Bold", 10, self.palette["gray_900"], 12)
+                y_text = draw_wrapped_text(title, left + 12, top - 28, width - 24, "Helvetica-Bold", 11, self.palette["gray_900"], 13)
 
                 pdf.setFont("Helvetica", 9)
                 pdf.setFillColor(self.palette["gray_700"])
@@ -326,7 +392,7 @@ class PdfGeneratorService:
                     for file_name in file_names:
                         y_files = draw_wrapped_text(f"• {file_name}", left + 16, y_files, width - 28, "Helvetica", 9, self.palette["gray_700"], 11)
 
-                return top - height - 8
+                return top - height - 12
 
             criteria_by_type: dict[str, list[dict[str, Any]]] = {}
             for criterion in payload.get("criteria", []):
@@ -344,23 +410,25 @@ class PdfGeneratorService:
                 ],
                 y,
             )
+            y -= 12
 
             supplier = payload.get("supplier", {})
             y = draw_section_title("Datos del proveedor", y)
             y = draw_key_values(
                 [
-                    ("Razón social", safe_value(supplier.get("business_name", ""))),
-                    ("RUT", safe_value(supplier.get("rut", ""))),
-                    ("Industria", safe_value(supplier.get("industry", ""))),
-                    ("Nombre de marca", safe_value(supplier.get("brand_name", ""))),
-                    ("Sitio web", safe_value(supplier.get("link", ""))),
-                    ("Slug", safe_value(supplier.get("slug", ""))),
+                    ("Razón social", safe_optional_value(supplier.get("business_name", ""))),
+                    ("RUT", safe_optional_value(supplier.get("rut", ""))),
+                    ("Industria", safe_optional_value(supplier.get("industry", ""))),
+                    ("Nombre de marca", safe_optional_value(supplier.get("brand_name", ""))),
+                    ("Sitio web", safe_optional_value(supplier.get("link", ""))),
                 ],
                 y,
             )
+            y -= 12
 
             y = draw_section_title("Resumen ejecutivo", y)
             y = draw_summary_metrics(y)
+            y -= 10
 
             y = draw_section_title("Detalle de criterios por categoría", y)
 
@@ -375,12 +443,8 @@ class PdfGeneratorService:
                 pdf.drawString(self.margin_x, y, f"{category} ({len(items)})")
                 y -= 16
 
-                for idx, item in enumerate(items, start=1):
-                    y = draw_criterion_item(item, idx, y)
-                    if y < self.margin_bottom + 60:
-                        draw_footer(page_counter)
-                        page_counter += 1
-                        y = new_page()
+                for item in items:
+                    y = draw_criterion_item(item, y)
 
             draw_footer(page_counter)
             pdf.save()
