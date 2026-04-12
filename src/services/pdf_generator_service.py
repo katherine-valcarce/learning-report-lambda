@@ -6,7 +6,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER
 from reportlab.graphics import renderPDF
 from reportlab.graphics.charts.piecharts import Pie
-from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.shapes import Circle, Drawing, String
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
@@ -213,7 +213,7 @@ class PdfGeneratorService:
                 gap = 10
                 total_w = self.page_width - (self.margin_x * 2)
                 box_w = (total_w - (gap * 2)) / 3
-                chart_h = 170
+                chart_h = 184
                 needed_h = (box_h * 2) + gap + 16 + chart_h
                 current_y = ensure_space(current_y, needed_h)
 
@@ -258,46 +258,90 @@ class PdfGeneratorService:
                 if has_indicator_values:
                     reported_value = max(0, min(100, float(reported_value)))
                     verified_value = max(0, min(100, float(verified_value)))
-                    remainder = max(0.0, 100.0 - max(reported_value, verified_value))
+                    empty_value = max(0.0, 100.0 - reported_value)
 
-                    drawing = Drawing(total_w, chart_h)
+                    # Layout de 2 columnas: donut a la izquierda y leyenda a la derecha
+                    chart_column_w = total_w * 0.46
+                    drawing = Drawing(chart_column_w, chart_h)
+
+                    donut_size = 132
+                    donut_x = 12
+                    donut_y = 28
+                    donut_center_x = donut_x + (donut_size / 2)
+                    donut_center_y = donut_y + (donut_size / 2)
+
                     pie = Pie()
-                    pie.x = 16
-                    pie.y = 22
-                    pie.width = 120
-                    pie.height = 120
+                    pie.x = donut_x
+                    pie.y = donut_y
+                    pie.width = donut_size
+                    pie.height = donut_size
                     pie.slices.strokeWidth = 0
-                    pie.data = [reported_value, verified_value, remainder]
-                    pie.slices[0].fillColor = self.palette["navy_soft"]
-                    pie.slices[1].fillColor = self.palette["green"]
+                    pie.data = [reported_value, verified_value, empty_value]
+                    pie.slices[0].fillColor = colors.HexColor("#5C8CC7")
+                    pie.slices[1].fillColor = colors.HexColor("#6EBC7F")
                     pie.slices[2].fillColor = self.palette["gray_200"]
                     pie.labels = ["", "", ""]
                     drawing.add(pie)
 
+                    # Círculo interno para simular visual "donut"
+                    inner_circle = Circle(
+                        donut_center_x,
+                        donut_center_y,
+                        donut_size * 0.30,
+                        fillColor=colors.white,
+                        strokeColor=colors.white,
+                        strokeWidth=0,
+                    )
+                    drawing.add(inner_circle)
+
+                    # Porcentaje principal al centro
+                    drawing.add(
+                        String(
+                            donut_center_x,
+                            donut_center_y + 6,
+                            f"{reported_value:.0f}%",
+                            textAnchor="middle",
+                            fontName="Helvetica-Bold",
+                            fontSize=20,
+                            fillColor=self.palette["gray_900"],
+                        )
+                    )
+                    drawing.add(
+                        String(
+                            donut_center_x,
+                            donut_center_y - 12,
+                            "Informado",
+                            textAnchor="middle",
+                            fontName="Helvetica",
+                            fontSize=8,
+                            fillColor=self.palette["gray_500"],
+                        )
+                    )
+
                     renderPDF.draw(drawing, pdf, self.margin_x, chart_top - chart_h)
 
-                    legend_x = self.margin_x + 160
-                    legend_y = chart_top - 20
+                    legend_x = self.margin_x + chart_column_w + 18
+                    legend_y = chart_top - 24
 
                     pdf.setFillColor(self.palette["gray_900"])
-                    pdf.setFont("Helvetica-Bold", 10)
+                    pdf.setFont("Helvetica-Bold", 11)
                     pdf.drawString(legend_x, legend_y, "Indicadores de cumplimiento")
 
                     legend_items = [
-                        ("Cumplimiento declarado", f"{reported_value:.0f}%", self.palette["navy_soft"]),
-                        ("Cumplimiento verificado", f"{verified_value:.0f}%", self.palette["green"]),
+                        ("Cumplimiento informado", f"{reported_value:.0f}%", colors.HexColor("#5C8CC7")),
+                        ("Cumplimiento verificado", f"{verified_value:.0f}%", colors.HexColor("#6EBC7F")),
                     ]
-                    row_y = legend_y - 18
+                    row_y = legend_y - 24
                     for label, value, color in legend_items:
                         pdf.setFillColor(color)
-                        pdf.circle(legend_x + 4, row_y + 2, 4, stroke=0, fill=1)
+                        pdf.circle(legend_x + 4, row_y + 3, 4, stroke=0, fill=1)
                         pdf.setFillColor(self.palette["gray_700"])
-                        pdf.setFont("Helvetica", 9)
+                        pdf.setFont("Helvetica", 10)
                         pdf.drawString(legend_x + 14, row_y, label)
                         pdf.setFillColor(self.palette["gray_900"])
-                        pdf.setFont("Helvetica-Bold", 9)
+                        pdf.setFont("Helvetica-Bold", 10)
                         pdf.drawRightString(self.page_width - self.margin_x, row_y, value)
-                        row_y -= 16
+                        row_y -= 22
                 else:
                     pdf.setFillColor(self.palette["gray_700"])
                     pdf.setFont("Helvetica", 10)
