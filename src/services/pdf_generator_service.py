@@ -213,7 +213,7 @@ class PdfGeneratorService:
                 gap = 10
                 total_w = self.page_width - (self.margin_x * 2)
                 box_w = (total_w - (gap * 2)) / 3
-                chart_h = 210
+                chart_h = 158
                 needed_h = (box_h * 2) + gap + 16 + chart_h
                 current_y = ensure_space(current_y, needed_h)
 
@@ -259,25 +259,25 @@ class PdfGeneratorService:
                     reported_value = max(0, min(100, float(reported_value)))
                     verified_value = max(0, min(100, float(verified_value)))
                     # Layout de 2 columnas: gráfico de anillos a la izquierda y leyenda a la derecha
-                    chart_column_w = total_w * 0.52
+                    chart_column_w = total_w * 0.5
                     drawing = Drawing(chart_column_w, chart_h)
 
-                    ring_center_x = chart_column_w * 0.48
+                    ring_center_x = chart_column_w * 0.47
                     ring_center_y = chart_h * 0.52
-                    outer_size = 158
-                    inner_ring_size = 110
-                    center_radius = 40
+                    outer_size = 124
+                    inner_ring_size = 86
+                    center_radius = 30
                     ring_bg = colors.HexColor("#E5E7EB")
 
-                    # Anillo exterior: cumplimiento informado
+                    # Anillo exterior: cumplimiento verificado
                     outer_pie = Pie()
                     outer_pie.x = ring_center_x - (outer_size / 2)
                     outer_pie.y = ring_center_y - (outer_size / 2)
                     outer_pie.width = outer_size
                     outer_pie.height = outer_size
                     outer_pie.slices.strokeWidth = 0
-                    outer_pie.data = [reported_value, max(0.0, 100.0 - reported_value)]
-                    outer_pie.slices[0].fillColor = colors.HexColor("#3b82f6")
+                    outer_pie.data = [verified_value, max(0.0, 100.0 - verified_value)]
+                    outer_pie.slices[0].fillColor = colors.HexColor("#059669")
                     outer_pie.slices[1].fillColor = ring_bg
                     outer_pie.labels = ["", ""]
                     drawing.add(outer_pie)
@@ -287,22 +287,22 @@ class PdfGeneratorService:
                         Circle(
                             ring_center_x,
                             ring_center_y,
-                            (outer_size / 2) - 18,
+                            (outer_size / 2) - 14,
                             fillColor=colors.white,
                             strokeColor=colors.white,
                             strokeWidth=0,
                         )
                     )
 
-                    # Anillo interior: cumplimiento verificado
+                    # Anillo interior: cumplimiento informado
                     inner_pie = Pie()
                     inner_pie.x = ring_center_x - (inner_ring_size / 2)
                     inner_pie.y = ring_center_y - (inner_ring_size / 2)
                     inner_pie.width = inner_ring_size
                     inner_pie.height = inner_ring_size
                     inner_pie.slices.strokeWidth = 0
-                    inner_pie.data = [verified_value, max(0.0, 100.0 - verified_value)]
-                    inner_pie.slices[0].fillColor = colors.HexColor("#059669")
+                    inner_pie.data = [reported_value, max(0.0, 100.0 - reported_value)]
+                    inner_pie.slices[0].fillColor = colors.HexColor("#3b82f6")
                     inner_pie.slices[1].fillColor = ring_bg
                     inner_pie.labels = ["", ""]
                     drawing.add(inner_pie)
@@ -321,7 +321,7 @@ class PdfGeneratorService:
 
                     renderPDF.draw(drawing, pdf, self.margin_x, chart_top - chart_h)
 
-                    legend_x = self.margin_x + chart_column_w + 18
+                    legend_x = self.margin_x + chart_column_w + 12
                     legend_block_h = 70
                     legend_y = chart_top - ((chart_h - legend_block_h) / 2)
 
@@ -349,7 +349,7 @@ class PdfGeneratorService:
                     pdf.setFont("Helvetica", 10)
                     pdf.drawString(self.margin_x, chart_top - 28, "Sin información disponible")
 
-                return top - needed_h - 8
+                return top - needed_h - 4
 
             def draw_status_pill(x: float, y_top: float, label: str, kind: str) -> None:
                 if kind == "ok":
@@ -474,7 +474,7 @@ class PdfGeneratorService:
 
             y = draw_section_title("Resumen ejecutivo", y)
             y = draw_summary_metrics(y)
-            y -= 10
+            y -= 6
 
             y = draw_section_title("Detalle de criterios por categoría", y)
 
