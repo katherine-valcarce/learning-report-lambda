@@ -87,4 +87,21 @@ def validate_event_payload(event: Any) -> dict[str, Any]:
                     f"criteria[{idx}].checker_files[{file_idx}].file_url debe ser string no vacío"
                 )
 
+    indicators = event.get("indicators")
+    if indicators is not None:
+        if not isinstance(indicators, dict):
+            raise ValidationError("indicators debe ser un objeto")
+
+        required_fields = ("reported_compliance_level", "verified_compliance_level")
+        for field in required_fields:
+            if field not in indicators:
+                raise ValidationError(f"indicators.{field} es obligatorio cuando indicators está presente")
+
+            value = indicators[field]
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValidationError(f"indicators.{field} debe ser numérico")
+
+            if value < 0 or value > 100:
+                raise ValidationError(f"indicators.{field} debe estar entre 0 y 100")
+
     return event
