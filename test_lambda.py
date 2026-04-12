@@ -42,6 +42,7 @@ event = {
             "checker_files": [],
         },
     ],
+    "indicators": { "reported_compliance_level": 67, "verified_compliance_level": 45 }
 }
 
 response = lambda_handler(event, None)
