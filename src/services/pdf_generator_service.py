@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 from math import cos, radians, sin
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER
@@ -15,6 +16,17 @@ from src.exceptions import PdfGenerationError
 
 
 class PdfGeneratorService:
+    COUNTRY_TIMEZONE_MAPPING = {
+        "CHL": "America/Santiago",
+        "CHILE": "America/Santiago",
+        "PER": "America/Lima",
+        "PERÚ": "America/Lima",
+        "PERU": "America/Lima",
+        "ARG": "America/Argentina/Buenos_Aires",
+        "ARGENTINA": "America/Argentina/Buenos_Aires",
+    }
+    DEFAULT_TIMEZONE = "America/Santiago"
+
     def __init__(self) -> None:
         self.page_width, self.page_height = LETTER
         self.margin_x = 48
@@ -82,6 +94,14 @@ class PdfGeneratorService:
                 text = safe_value(value).strip()
                 return text if text else "Sin información disponible"
 
+            def get_supplier_timezone() -> ZoneInfo:
+                supplier = payload.get("supplier") or {}
+                supplier_country = safe_value(supplier.get("country")).strip().upper()
+                timezone_name = self.COUNTRY_TIMEZONE_MAPPING.get(
+                    supplier_country, self.DEFAULT_TIMEZONE
+                )
+                return ZoneInfo(timezone_name)
+
             def draw_wrapped_text(
                 text: str,
                 x: float,
@@ -127,7 +147,10 @@ class PdfGeneratorService:
                 pdf.setFillColor(self.palette["navy"])
                 pdf.roundRect(left, top - band_h, width, band_h, 8, fill=1, stroke=0)
 
-                generated_at = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M UTC")
+                supplier_timezone = get_supplier_timezone()
+                generated_at = datetime.now(timezone.utc).astimezone(supplier_timezone).strftime(
+                    "%d/%m/%Y %H:%M"
+                )
 
                 pdf.setFillColor(colors.white)
                 pdf.setFont("Helvetica-Bold", 17)
@@ -135,7 +158,7 @@ class PdfGeneratorService:
 
                 pdf.setFont("Helvetica", 10)
                 pdf.drawString(left + 16, top - 46, f"Solicitud: {safe_value(payload.get('request_id'))}")
-                pdf.drawString(left + 16, top - 61, f"Generado: {generated_at}")
+                pdf.drawString(left + 16, top - 61, f"Fecha de generación: {generated_at}")
 
                 pdf.setFillColor(self.palette["gray_200"])
                 pdf.setFont("Helvetica-Bold", 9)
