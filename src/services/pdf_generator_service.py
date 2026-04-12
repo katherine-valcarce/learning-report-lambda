@@ -6,7 +6,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER
 from reportlab.graphics import renderPDF
 from reportlab.graphics.charts.piecharts import Pie
-from reportlab.graphics.shapes import Circle, Drawing, String
+from reportlab.graphics.shapes import Circle, Drawing
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
@@ -213,7 +213,7 @@ class PdfGeneratorService:
                 gap = 10
                 total_w = self.page_width - (self.margin_x * 2)
                 box_w = (total_w - (gap * 2)) / 3
-                chart_h = 184
+                chart_h = 210
                 needed_h = (box_h * 2) + gap + 16 + chart_h
                 current_y = ensure_space(current_y, needed_h)
 
@@ -258,78 +258,80 @@ class PdfGeneratorService:
                 if has_indicator_values:
                     reported_value = max(0, min(100, float(reported_value)))
                     verified_value = max(0, min(100, float(verified_value)))
-                    empty_value = max(0.0, 100.0 - reported_value)
-
-                    # Layout de 2 columnas: donut a la izquierda y leyenda a la derecha
-                    chart_column_w = total_w * 0.46
+                    # Layout de 2 columnas: gráfico de anillos a la izquierda y leyenda a la derecha
+                    chart_column_w = total_w * 0.52
                     drawing = Drawing(chart_column_w, chart_h)
 
-                    donut_size = 132
-                    donut_x = 12
-                    donut_y = 28
-                    donut_center_x = donut_x + (donut_size / 2)
-                    donut_center_y = donut_y + (donut_size / 2)
+                    ring_center_x = chart_column_w * 0.48
+                    ring_center_y = chart_h * 0.52
+                    outer_size = 158
+                    inner_ring_size = 110
+                    center_radius = 40
+                    ring_bg = colors.HexColor("#E5E7EB")
 
-                    pie = Pie()
-                    pie.x = donut_x
-                    pie.y = donut_y
-                    pie.width = donut_size
-                    pie.height = donut_size
-                    pie.slices.strokeWidth = 0
-                    pie.data = [reported_value, verified_value, empty_value]
-                    pie.slices[0].fillColor = colors.HexColor("#5C8CC7")
-                    pie.slices[1].fillColor = colors.HexColor("#6EBC7F")
-                    pie.slices[2].fillColor = self.palette["gray_200"]
-                    pie.labels = ["", "", ""]
-                    drawing.add(pie)
+                    # Anillo exterior: cumplimiento informado
+                    outer_pie = Pie()
+                    outer_pie.x = ring_center_x - (outer_size / 2)
+                    outer_pie.y = ring_center_y - (outer_size / 2)
+                    outer_pie.width = outer_size
+                    outer_pie.height = outer_size
+                    outer_pie.slices.strokeWidth = 0
+                    outer_pie.data = [reported_value, max(0.0, 100.0 - reported_value)]
+                    outer_pie.slices[0].fillColor = colors.HexColor("#3b82f6")
+                    outer_pie.slices[1].fillColor = ring_bg
+                    outer_pie.labels = ["", ""]
+                    drawing.add(outer_pie)
 
-                    # Círculo interno para simular visual "donut"
-                    inner_circle = Circle(
-                        donut_center_x,
-                        donut_center_y,
-                        donut_size * 0.30,
-                        fillColor=colors.white,
-                        strokeColor=colors.white,
-                        strokeWidth=0,
-                    )
-                    drawing.add(inner_circle)
-
-                    # Porcentaje principal al centro
+                    # Ahuecado del anillo exterior para dejarlo más delgado
                     drawing.add(
-                        String(
-                            donut_center_x,
-                            donut_center_y + 6,
-                            f"{reported_value:.0f}%",
-                            textAnchor="middle",
-                            fontName="Helvetica-Bold",
-                            fontSize=20,
-                            fillColor=self.palette["gray_900"],
+                        Circle(
+                            ring_center_x,
+                            ring_center_y,
+                            (outer_size / 2) - 18,
+                            fillColor=colors.white,
+                            strokeColor=colors.white,
+                            strokeWidth=0,
                         )
                     )
+
+                    # Anillo interior: cumplimiento verificado
+                    inner_pie = Pie()
+                    inner_pie.x = ring_center_x - (inner_ring_size / 2)
+                    inner_pie.y = ring_center_y - (inner_ring_size / 2)
+                    inner_pie.width = inner_ring_size
+                    inner_pie.height = inner_ring_size
+                    inner_pie.slices.strokeWidth = 0
+                    inner_pie.data = [verified_value, max(0.0, 100.0 - verified_value)]
+                    inner_pie.slices[0].fillColor = colors.HexColor("#059669")
+                    inner_pie.slices[1].fillColor = ring_bg
+                    inner_pie.labels = ["", ""]
+                    drawing.add(inner_pie)
+
+                    # Centro blanco limpio (sin borde ni texto)
                     drawing.add(
-                        String(
-                            donut_center_x,
-                            donut_center_y - 12,
-                            "Informado",
-                            textAnchor="middle",
-                            fontName="Helvetica",
-                            fontSize=8,
-                            fillColor=self.palette["gray_500"],
+                        Circle(
+                            ring_center_x,
+                            ring_center_y,
+                            center_radius,
+                            fillColor=colors.white,
+                            strokeColor=colors.white,
+                            strokeWidth=0,
                         )
                     )
 
                     renderPDF.draw(drawing, pdf, self.margin_x, chart_top - chart_h)
 
                     legend_x = self.margin_x + chart_column_w + 18
-                    legend_y = chart_top - 24
+                    legend_block_h = 70
+                    legend_y = chart_top - ((chart_h - legend_block_h) / 2)
 
                     pdf.setFillColor(self.palette["gray_900"])
                     pdf.setFont("Helvetica-Bold", 11)
                     pdf.drawString(legend_x, legend_y, "Indicadores de cumplimiento")
 
                     legend_items = [
-                        ("Cumplimiento informado", f"{reported_value:.0f}%", colors.HexColor("#5C8CC7")),
-                        ("Cumplimiento verificado", f"{verified_value:.0f}%", colors.HexColor("#6EBC7F")),
+                        ("Cumplimiento informado", f"{reported_value:.0f}%", colors.HexColor("#3b82f6")),
+                        ("Cumplimiento verificado", f"{verified_value:.0f}%", colors.HexColor("#059669")),
                     ]
                     row_y = legend_y - 24
                     for label, value, color in legend_items:
