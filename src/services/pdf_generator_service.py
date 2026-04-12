@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from io import BytesIO
+from math import cos, radians, sin
 from typing import Any
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER
 from reportlab.graphics import renderPDF
 from reportlab.graphics.charts.piecharts import Pie
-from reportlab.graphics.shapes import Circle, Drawing
+from reportlab.graphics.shapes import Circle, Drawing, String
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas
 
@@ -316,6 +317,40 @@ class PdfGeneratorService:
                             fillColor=colors.white,
                             strokeColor=colors.white,
                             strokeWidth=0,
+                        )
+                    )
+
+                    # Porcentajes sobre los anillos (sin cajas, sobrio y legible)
+                    outer_label_angle = 34  # cerca del arco superior derecho del anillo exterior
+                    inner_label_angle = 216  # cerca del arco inferior izquierdo del anillo interior
+                    outer_label_radius = (outer_size / 2) - 7
+                    inner_label_radius = (inner_ring_size / 2) - 6
+
+                    outer_label_x = ring_center_x + (outer_label_radius * cos(radians(outer_label_angle)))
+                    outer_label_y = ring_center_y + (outer_label_radius * sin(radians(outer_label_angle)))
+                    inner_label_x = ring_center_x + (inner_label_radius * cos(radians(inner_label_angle)))
+                    inner_label_y = ring_center_y + (inner_label_radius * sin(radians(inner_label_angle)))
+
+                    drawing.add(
+                        String(
+                            outer_label_x,
+                            outer_label_y,
+                            f"{verified_value:.0f}%",
+                            fontName="Helvetica-Bold",
+                            fontSize=9,
+                            fillColor=colors.HexColor("#047857"),
+                            textAnchor="middle",
+                        )
+                    )
+                    drawing.add(
+                        String(
+                            inner_label_x,
+                            inner_label_y,
+                            f"{reported_value:.0f}%",
+                            fontName="Helvetica-Bold",
+                            fontSize=9,
+                            fillColor=colors.HexColor("#1d4ed8"),
+                            textAnchor="middle",
                         )
                     )
 
