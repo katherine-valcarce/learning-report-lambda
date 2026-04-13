@@ -11,6 +11,7 @@ event = {
         "email": "test@test.com",
     },
     "supplier": {
+        "country":"CHL",
         "id_supplier": "sup-1",
         "business_name": "Empresa Test",
         "rut": "12.345.678-9",
