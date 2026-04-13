@@ -125,6 +125,11 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     logger.info("Inicio de procesamiento de informe")
 
     try:
+        settings = get_settings()
+        execution_mode = "local" if settings.local_test_mode else "AWS"
+        logger.info("Ambiente: %s", settings.app_env)
+        logger.info("Lambda ejecutándose en modo %s", execution_mode)
+
         payload = validate_event_payload(event)
 
         request_id = payload["request_id"]
@@ -137,6 +142,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         pdf_service = PdfGeneratorService()
         pdf_buffer = pdf_service.generate(payload, metrics)
 
+        if settings.local_test_mode or _is_local_test_mode():
         if _is_local_test_mode():
             logger.info("Lambda ejecutándose en modo local")
             return _handle_local_output(

@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: learning-report-lambda - Generación de informes PDF y notificación por SES.
+
+Parameters:
+  AppEnv:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Ambiente de la aplicación.
+  AwsRegion:
+    Type: String
+    Default: us-east-1
+    Description: Región AWS para recursos S3/SES.
+  S3BucketName:
+    Type: String
+    Default: informes-comespro-dev
+    Description: Bucket S3 donde se almacenarán los reportes PDF.
+  SesSenderEmail:
+    Type: String
+    Default: dev@tudominio.com
+    Description: Correo remitente configurado en SES.
+  ReportsPrefix:
+    Type: String
+    Default: reports
+    Description: Prefijo de carpeta para reportes en S3.
+  LocalTestMode:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Mantener en false en AWS. true solo para pruebas locales.
+
+Resources:
+  LearningReportLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub learning-report-lambda-${AppEnv}
+      Description: !Sub Lambda de generación de informes (${AppEnv})
+      Runtime: python3.11
+      Handler: src.handler.lambda_handler
+      CodeUri: .
+      Timeout: 60
+      MemorySize: 512
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          APP_ENV: !Ref AppEnv
+          AWS_REGION: !Ref AwsRegion
+          S3_BUCKET_NAME: !Ref S3BucketName
+          SES_SENDER_EMAIL: !Ref SesSenderEmail
+          REPORTS_PREFIX: !Ref ReportsPrefix
+          LOCAL_TEST_MODE: !Ref LocalTestMode
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Statement:
+            - Sid: S3WriteAccess
+              Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: !Sub arn:aws:s3:::${S3BucketName}/*
+            - Sid: SesSendEmail
+              Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: "*"
+
+Outputs:
+  LambdaName:
+    Description: Nombre de la función Lambda
+    Value: !Ref LearningReportLambdaFunction
+  LambdaArn:
+    Description: ARN de la función Lambda
+    Value: !GetAtt LearningReportLambdaFunction.Arn
