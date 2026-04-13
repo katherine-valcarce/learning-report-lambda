@@ -50,7 +50,7 @@ Resources:
       Environment:
         Variables:
           APP_ENV: !Ref AppEnv
-          AWS_REGION: !Ref AwsRegion
+          AWS_REGION: !Ref AWS::Region
           S3_BUCKET_NAME: !Ref S3BucketName
           SES_SENDER_EMAIL: !Ref SesSenderEmail
           REPORTS_PREFIX: !Ref ReportsPrefix
@@ -62,6 +62,7 @@ Resources:
               Effect: Allow
               Action:
                 - s3:PutObject
+                - s3:GetObject
               Resource: !Sub arn:aws:s3:::${S3BucketName}/*
             - Sid: SesSendEmail
               Effect: Allow
