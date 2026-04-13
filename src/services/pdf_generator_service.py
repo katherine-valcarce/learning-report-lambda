@@ -248,6 +248,21 @@ class PdfGeneratorService:
 
                 left = self.margin_x
                 top = current_y
+                indicators = payload.get("indicators")
+                if isinstance(indicators, dict) and isinstance(
+                    indicators.get("verified_compliance_level"), (int, float)
+                ):
+                    verification_rate = max(
+                        0, min(100, round(float(indicators.get("verified_compliance_level"))))
+                    )
+                else:
+                    verification_rate = round(
+                        (
+                            metrics.get("verified_criteria", 0)
+                            / max(metrics.get("total_criteria", 1), 1)
+                        )
+                        * 100
+                    )
 
                 values = [
                     ("Total criterios", safe_value(metrics.get("total_criteria", 0)), "neutral"),
@@ -261,7 +276,7 @@ class PdfGeneratorService:
                     ),
                     (
                         "Tasa verificación",
-                        f"{round((metrics.get('verified_criteria', 0) / max(metrics.get('total_criteria', 1), 1)) * 100)}%",
+                        f"{verification_rate}%",
                         "positive",
                     ),
                 ]
@@ -274,7 +289,6 @@ class PdfGeneratorService:
                     draw_metric_box(x, box_top, box_w, box_h, title, value, tone)
 
                 chart_top = top - ((box_h * 2) + gap) - 14
-                indicators = payload.get("indicators")
                 if isinstance(indicators, dict):
                     reported_value = indicators.get("reported_compliance_level")
                     verified_value = indicators.get("verified_compliance_level")
