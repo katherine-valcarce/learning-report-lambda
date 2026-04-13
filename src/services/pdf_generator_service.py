@@ -238,11 +238,11 @@ class PdfGeneratorService:
                 pdf.drawString(x + 10, top - 36, value)
 
             def draw_summary_metrics(current_y: float) -> float:
-                box_h = 48
-                gap = 10
+                box_h = 44
+                gap = 8
                 total_w = self.page_width - (self.margin_x * 2)
                 box_w = (total_w - (gap * 2)) / 3
-                chart_h = 158
+                chart_h = 144
                 needed_h = (box_h * 2) + gap + 16 + chart_h
                 current_y = ensure_space(current_y, needed_h)
 
@@ -273,7 +273,7 @@ class PdfGeneratorService:
                     box_top = top - (row * (box_h + gap))
                     draw_metric_box(x, box_top, box_w, box_h, title, value, tone)
 
-                chart_top = top - ((box_h * 2) + gap) - 18
+                chart_top = top - ((box_h * 2) + gap) - 14
                 indicators = payload.get("indicators")
                 if isinstance(indicators, dict):
                     reported_value = indicators.get("reported_compliance_level")
@@ -293,9 +293,9 @@ class PdfGeneratorService:
 
                     ring_center_x = chart_column_w * 0.47
                     ring_center_y = chart_h * 0.52
-                    outer_size = 124
-                    inner_ring_size = 86
-                    center_radius = 30
+                    outer_size = 114
+                    inner_ring_size = 78
+                    center_radius = 27
                     ring_bg = colors.HexColor("#E5E7EB")
 
                     # Anillo exterior: cumplimiento verificado
@@ -402,7 +402,7 @@ class PdfGeneratorService:
                     renderPDF.draw(drawing, pdf, self.margin_x, chart_top - chart_h)
 
                     legend_x = self.margin_x + chart_column_w + 12
-                    legend_block_h = 70
+                    legend_block_h = 64
                     legend_y = chart_top - ((chart_h - legend_block_h) / 2)
 
                     pdf.setFillColor(self.palette["gray_900"])
@@ -413,7 +413,7 @@ class PdfGeneratorService:
                         ("Cumplimiento informado", f"{reported_value:.0f}%", colors.HexColor("#3b82f6")),
                         ("Cumplimiento verificado", f"{verified_value:.0f}%", colors.HexColor("#059669")),
                     ]
-                    row_y = legend_y - 24
+                    row_y = legend_y - 22
                     for label, value, color in legend_items:
                         pdf.setFillColor(color)
                         pdf.circle(legend_x + 4, row_y + 3, 4, stroke=0, fill=1)
@@ -430,6 +430,25 @@ class PdfGeneratorService:
                     pdf.drawString(self.margin_x, chart_top - 28, "Sin información disponible")
 
                 return top - needed_h - 4
+
+            def draw_executive_summary_intro(current_y: float) -> float:
+                intro_text = (
+                    "Este resumen ejecutivo presenta una síntesis del desempeño del proveedor en criterios ASG "
+                    "(Ambientales, Sociales y de Gobernanza), integrando tanto la información declarada como "
+                    "aquella respaldada mediante documentación verificadora. "
+                    "Su propósito es entregar una visión clara y objetiva del nivel de cumplimiento, permitiendo "
+                    "evaluar la solidez de su gestión y su compromiso con prácticas sostenibles."
+                )
+                return draw_wrapped_text(
+                    intro_text,
+                    self.margin_x,
+                    current_y,
+                    self.page_width - (self.margin_x * 2),
+                    "Helvetica",
+                    9,
+                    self.palette["gray_700"],
+                    12,
+                )
 
             def draw_status_pill(x: float, y_top: float, label: str, kind: str) -> None:
                 if kind == "ok":
@@ -553,6 +572,8 @@ class PdfGeneratorService:
             y -= 12
 
             y = draw_section_title("Resumen ejecutivo", y)
+            y = draw_executive_summary_intro(y)
+            y -= 2
             y = draw_summary_metrics(y)
             y -= 6
 
