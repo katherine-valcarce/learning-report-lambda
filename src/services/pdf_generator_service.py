@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 from math import cos, radians, sin
 from typing import Any
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import LETTER
@@ -100,7 +100,12 @@ class PdfGeneratorService:
                 timezone_name = self.COUNTRY_TIMEZONE_MAPPING.get(
                     supplier_country, self.DEFAULT_TIMEZONE
                 )
-                return ZoneInfo(timezone_name)
+                try:
+                    return ZoneInfo(timezone_name)
+                except ZoneInfoNotFoundError:
+                    # Some local environments (e.g., Windows without tzdata)
+                    # do not include the IANA timezone database.
+                    return ZoneInfo("UTC")
 
             def draw_wrapped_text(
                 text: str,
