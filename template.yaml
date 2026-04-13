@@ -50,7 +50,6 @@ Resources:
       Environment:
         Variables:
           APP_ENV: !Ref AppEnv
-          AWS_REGION: !Ref AWS::Region
           S3_BUCKET_NAME: !Ref S3BucketName
           SES_SENDER_EMAIL: !Ref SesSenderEmail
           REPORTS_PREFIX: !Ref ReportsPrefix
