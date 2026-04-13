@@ -433,7 +433,7 @@ class PdfGeneratorService:
 
             def draw_executive_summary_intro(current_y: float) -> float:
                 intro_text = (
-                    "Este resumen ejecutivo presenta una síntesis del desempeño del proveedor en criterios ASG "
+                    "A continuación, una síntesis del desempeño del proveedor en criterios ASG "
                     "(Ambientales, Sociales y de Gobernanza), integrando tanto la información declarada como "
                     "aquella respaldada mediante documentación verificadora. "
                     "Su propósito es entregar una visión clara y objetiva del nivel de cumplimiento, permitiendo "
