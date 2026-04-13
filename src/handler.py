@@ -45,6 +45,14 @@ def _build_base_response(request_id: str, metrics: dict[str, int]) -> dict[str, 
     }
 
 
+def _build_error_response(status_code: int, message: str, error: str) -> dict[str, Any]:
+    return {
+        "statusCode": status_code,
+        "message": message,
+        "error": error,
+    }
+
+
 def _handle_local_output(pdf_buffer: Any, request_id: str, metrics: dict[str, int]) -> dict[str, Any]:
     output_dir = "local_output"
     os.makedirs(output_dir, exist_ok=True)
@@ -130,12 +138,14 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         pdf_buffer = pdf_service.generate(payload, metrics)
 
         if _is_local_test_mode():
+            logger.info("Lambda ejecutándose en modo local")
             return _handle_local_output(
                 pdf_buffer=pdf_buffer,
                 request_id=request_id,
                 metrics=metrics,
             )
 
+        logger.info("Lambda ejecutándose en modo AWS")
         return _handle_aws_output(
             pdf_buffer=pdf_buffer,
             request_id=request_id,
@@ -146,10 +156,22 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
 
     except ValidationError as exc:
         logger.error("Error de validación: %s", exc)
-        return {"statusCode": 400, "error": str(exc)}
+        return _build_error_response(
+            status_code=400,
+            message="Error de validación",
+            error=str(exc),
+        )
     except (PdfGenerationError, StorageError, EmailDeliveryError) as exc:
         logger.error("Error de procesamiento: %s", exc)
-        return {"statusCode": 500, "error": str(exc)}
+        return _build_error_response(
+            status_code=500,
+            message="Error interno",
+            error=str(exc),
+        )
     except Exception as exc:
         logger.exception("Error no controlado")
-        return {"statusCode": 500, "error": f"Error interno no controlado: {exc}"}
+        return _build_error_response(
+            status_code=500,
+            message="Error interno",
+            error=f"Error interno no controlado: {exc}",
+        )
