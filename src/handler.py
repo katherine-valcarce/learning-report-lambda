@@ -143,7 +143,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         pdf_buffer = pdf_service.generate(payload, metrics)
 
         if settings.local_test_mode or _is_local_test_mode():
-        if _is_local_test_mode():
             logger.info("Lambda ejecutándose en modo local")
             return _handle_local_output(
                 pdf_buffer=pdf_buffer,
