@@ -1,5 +1,5 @@
-from typing import Any
 import os
+from typing import Any
 
 from src.config import get_settings
 from src.exceptions import (
@@ -33,6 +33,86 @@ def _calculate_summary_metrics(criteria: list[dict[str, Any]]) -> dict[str, int]
     }
 
 
+def _is_local_test_mode() -> bool:
+    return os.getenv("LOCAL_TEST_MODE", "false").strip().lower() == "true"
+
+
+def _build_base_response(request_id: str, metrics: dict[str, int]) -> dict[str, Any]:
+    return {
+        "statusCode": 200,
+        "request_id": request_id,
+        "metrics": metrics,
+    }
+
+
+def _handle_local_output(pdf_buffer: Any, request_id: str, metrics: dict[str, int]) -> dict[str, Any]:
+    output_dir = "local_output"
+    os.makedirs(output_dir, exist_ok=True)
+
+    pdf_path = os.path.join(output_dir, f"report-{request_id}.pdf")
+    with open(pdf_path, "wb") as file:
+        file.write(pdf_buffer.getvalue())
+
+    logger.info("PDF generado localmente en %s", pdf_path)
+
+    response = _build_base_response(request_id=request_id, metrics=metrics)
+    response.update(
+        {
+            "message": "PDF generado localmente, sin S3 ni SES",
+            "local_pdf_path": pdf_path,
+        }
+    )
+    return response
+
+
+def _handle_aws_output(
+    pdf_buffer: Any,
+    request_id: str,
+    supplier: dict[str, Any],
+    requester: dict[str, Any],
+    metrics: dict[str, int],
+) -> dict[str, Any]:
+    settings = get_settings()
+
+    s3_service = S3Service(
+        bucket_name=settings.s3_bucket_name,
+        region_name=settings.aws_region,
+        reports_prefix=settings.reports_prefix,
+    )
+    upload_result = s3_service.upload_pdf(
+        supplier_id=supplier["id_supplier"],
+        pdf_buffer=pdf_buffer,
+    )
+
+    email_service = EmailService(
+        sender_email=settings.ses_sender_email,
+        region_name=settings.aws_region,
+    )
+    email_response = email_service.send_report_ready_email(
+        recipient_name=requester["name"],
+        recipient_email=requester["email"],
+        supplier_name=supplier["business_name"],
+        request_id=request_id,
+        report_reference=upload_result.get("presigned_url") or upload_result["s3_uri"],
+    )
+
+    logger.info(
+        "Proceso completado request_id=%s, s3_uri=%s, email_message_id=%s",
+        request_id,
+        upload_result["s3_uri"],
+        email_response.get("MessageId"),
+    )
+
+    response = _build_base_response(request_id=request_id, metrics=metrics)
+    response.update(
+        {
+            "message": "Informe generado y notificado correctamente",
+            "report": upload_result,
+        }
+    )
+    return response
+
+
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     logger.info("Inicio de procesamiento de informe")
 
@@ -49,65 +129,20 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         pdf_service = PdfGeneratorService()
         pdf_buffer = pdf_service.generate(payload, metrics)
 
-        # Modo local: genera PDF pero NO intenta subir a S3 ni enviar correo
-        local_test_mode = os.getenv("LOCAL_TEST_MODE", "false").lower() == "true"
+        if _is_local_test_mode():
+            return _handle_local_output(
+                pdf_buffer=pdf_buffer,
+                request_id=request_id,
+                metrics=metrics,
+            )
 
-        if local_test_mode:
-            output_dir = "local_output"
-            os.makedirs(output_dir, exist_ok=True)
-
-            pdf_path = os.path.join(output_dir, f"report-{request_id}.pdf")
-            with open(pdf_path, "wb") as f:
-                f.write(pdf_buffer.getvalue())
-
-            logger.info("PDF generado localmente en %s", pdf_path)
-
-            return {
-                "statusCode": 200,
-                "message": "PDF generado localmente, sin S3 ni SES",
-                "request_id": request_id,
-                "local_pdf_path": pdf_path,
-                "metrics": metrics,
-            }
-
-        settings = get_settings()
-
-        s3_service = S3Service(
-            bucket_name=settings.s3_bucket_name,
-            region_name=settings.aws_region,
-            reports_prefix=settings.reports_prefix,
-        )
-        upload_result = s3_service.upload_pdf(
-            supplier_id=supplier["id_supplier"],
+        return _handle_aws_output(
             pdf_buffer=pdf_buffer,
-        )
-
-        email_service = EmailService(
-            sender_email=settings.ses_sender_email,
-            region_name=settings.aws_region,
-        )
-        email_response = email_service.send_report_ready_email(
-            recipient_name=requester["name"],
-            recipient_email=requester["email"],
-            supplier_name=supplier["business_name"],
             request_id=request_id,
-            report_reference=upload_result.get("presigned_url") or upload_result["s3_uri"],
+            supplier=supplier,
+            requester=requester,
+            metrics=metrics,
         )
-
-        logger.info(
-            "Proceso completado request_id=%s, s3_uri=%s, email_message_id=%s",
-            request_id,
-            upload_result["s3_uri"],
-            email_response.get("MessageId"),
-        )
-
-        return {
-            "statusCode": 200,
-            "message": "Informe generado y notificado correctamente",
-            "request_id": request_id,
-            "report": upload_result,
-            "metrics": metrics,
-        }
 
     except ValidationError as exc:
         logger.error("Error de validación: %s", exc)
