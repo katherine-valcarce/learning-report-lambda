@@ -5,6 +5,7 @@ from src.exceptions import ValidationError
 
 _EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _VALID_COMPLIANCE = {"Tiene", "No tiene"}
+_VALID_COUNTRY_CODES = {"CHL", "PER", "ARG"}
 
 
 def _required_str(data: dict[str, Any], field: str, label: str) -> str:
@@ -35,6 +36,17 @@ def validate_event_payload(event: Any) -> dict[str, Any]:
 
     _required_str(supplier, "id_supplier", "supplier.id_supplier")
     _required_str(supplier, "business_name", "supplier.business_name")
+    raw_country = supplier.get("country")
+    if raw_country is None:
+        country = "CHL"
+    elif not isinstance(raw_country, str) or not raw_country.strip():
+        raise ValidationError("supplier.country debe ser string no vacío cuando se envía")
+    else:
+        country = raw_country.strip().upper()
+
+    if country not in _VALID_COUNTRY_CODES:
+        raise ValidationError("supplier.country debe ser código ISO3 válido: CHL, PER o ARG")
+    supplier["country"] = country
 
     criteria = event.get("criteria")
     if not isinstance(criteria, list):
