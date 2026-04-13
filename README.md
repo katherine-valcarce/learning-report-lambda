@@ -64,11 +64,11 @@
 +  "supplier": {
 +    "id_supplier": "uuid",
 +    "business_name": "string",
++    "country": "chl | per | arg (opcional, default: chl)",
 +    "rut": "string",
 +    "industry": "string",
 +    "brand_name": "string",
-+    "link": "string",
-+    "slug": "string"
++    "link": "string"
 +  },
 +  "criteria": [
 +    {
@@ -113,8 +113,7 @@
 +    "rut": "76.123.456-7",
 +    "industry": "Educación",
 +    "brand_name": "Demo Learning",
-+    "link": "https://demo.example.com",
-+    "slug": "proveedor-demo"
++    "link": "https://demo.example.com"
 +  },
 +  "criteria": [
 +    {

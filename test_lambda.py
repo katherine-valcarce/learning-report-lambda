@@ -18,7 +18,6 @@ event = {
         "industry": "Retail",
         "brand_name": "Marca Test",
         "link": "https://empresa-test.cl",
-        "slug": "empresa-test",
     },
     "criteria": [
         {
