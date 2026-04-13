@@ -6,29 +6,44 @@ from src.exceptions import ValidationError
 
 @dataclass(frozen=True)
 class Settings:
+    app_env: str
     s3_bucket_name: str
     ses_sender_email: str
     aws_region: str
-    reports_prefix: str = "reports"
+    reports_prefix: str
+    local_test_mode: bool
 
 
 _REQUIRED_ENV_VARS = ("S3_BUCKET_NAME", "SES_SENDER_EMAIL", "AWS_REGION")
 
 
+def _get_bool_env(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).strip().lower() == "true"
+
+
 def get_settings() -> Settings:
-    missing = [key for key in _REQUIRED_ENV_VARS if not os.getenv(key)]
-    if missing:
-        raise ValidationError(
-            "Faltan variables de entorno obligatorias: " + ", ".join(missing)
-        )
+    app_env = (os.getenv("APP_ENV") or "dev").strip().lower() or "dev"
+    local_test_mode = _get_bool_env("LOCAL_TEST_MODE", default="false")
+    aws_region = (os.getenv("AWS_REGION") or "").strip()
+    s3_bucket_name = (os.getenv("S3_BUCKET_NAME") or "").strip()
+    ses_sender_email = (os.getenv("SES_SENDER_EMAIL") or "").strip()
 
     reports_prefix = (os.getenv("REPORTS_PREFIX") or "reports").strip().strip("/")
     if not reports_prefix:
         reports_prefix = "reports"
 
+    if not local_test_mode:
+        missing = [key for key in _REQUIRED_ENV_VARS if not os.getenv(key, "").strip()]
+        if missing:
+            raise ValidationError(
+                "Faltan variables de entorno obligatorias: " + ", ".join(missing)
+            )
+
     return Settings(
-        s3_bucket_name=os.environ["S3_BUCKET_NAME"],
-        ses_sender_email=os.environ["SES_SENDER_EMAIL"],
-        aws_region=os.environ["AWS_REGION"],
+        app_env=app_env,
+        s3_bucket_name=s3_bucket_name,
+        ses_sender_email=ses_sender_email,
+        aws_region=aws_region,
         reports_prefix=reports_prefix,
+        local_test_mode=local_test_mode,
     )
