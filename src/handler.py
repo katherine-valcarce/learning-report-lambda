@@ -111,18 +111,21 @@ def _handle_aws_output(
         sender_email=settings.ses_sender_email,
         region_name=settings.aws_region,
     )
-    zip_reference = upload_result["zip"].get("presigned_url") or upload_result["zip"]["s3_uri"]
+    pdf_reference = upload_result["pdf_reference"]
+    zip_reference = upload_result["zip_reference"]
     email_response = email_service.send_report_ready_email(
         recipient_name=requester["name"],
         recipient_email=requester["email"],
         supplier_name=supplier["business_name"],
         request_id=request_id,
+        pdf_reference=pdf_reference,
         zip_reference=zip_reference,
     )
 
     logger.info(
-        "Proceso completado request_id=%s, zip_s3_uri=%s, email_message_id=%s",
+        "Proceso completado request_id=%s, pdf_s3_uri=%s, zip_s3_uri=%s, email_message_id=%s",
         request_id,
+        upload_result["pdf"]["s3_uri"],
         upload_result["zip"]["s3_uri"],
         email_response.get("MessageId"),
     )
