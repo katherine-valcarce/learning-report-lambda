@@ -1,6 +1,4 @@
 import os
-import base64
-import mimetypes
 from dataclasses import dataclass
 
 from src.exceptions import ValidationError
@@ -26,18 +24,6 @@ def _get_bool_env(name: str, default: str = "false") -> bool:
 
 
 def _build_logo_src() -> str:
-    logo_path = (os.getenv("EMAIL_LOGO_PATH") or "").strip()
-    if logo_path:
-        try:
-            with open(logo_path, "rb") as logo_file:
-                encoded = base64.b64encode(logo_file.read()).decode("ascii")
-        except OSError as exc:
-            raise ValidationError(
-                f"No se pudo leer EMAIL_LOGO_PATH='{logo_path}': {exc}"
-            ) from exc
-        mime_type = mimetypes.guess_type(logo_path)[0] or "image/png"
-        return f"data:{mime_type};base64,{encoded}"
-
     return (os.getenv("EMAIL_LOGO_URL") or "https://i.imgur.com/St19Vpz.png").strip()
 
 

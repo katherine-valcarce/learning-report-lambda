@@ -52,7 +52,6 @@ learning-report-lambda/
 - `REPORTS_PREFIX`: prefijo de carpeta en S3. Default: `reports`.
 - `PLATFORM_URL`: URL pública de la plataforma (se muestra en el footer del correo). Default: vacío.
 - `EMAIL_LOGO_URL`: URL del logo usado en la cabecera del correo. Default: `https://i.imgur.com/15AZiBa.png`.
-- `EMAIL_LOGO_PATH`: ruta local absoluta del logo para incrustarlo en base64 dentro del correo (opcional). Si se define, tiene prioridad sobre `EMAIL_LOGO_URL`.
 - `LOCAL_TEST_MODE`: `true`/`false` (en minúscula recomendado). Default: `false`.
 
 ### Reglas de validación
@@ -106,9 +105,6 @@ export LOCAL_TEST_MODE="true"
 export REPORTS_PREFIX="reports"
 export PLATFORM_URL="https://tu-plataforma-dev.com"
 export EMAIL_LOGO_URL="https://i.imgur.com/15AZiBa.png"
-# Opcional: incrustar el logo directamente en el correo para evitar compresión externa.
-# Si la defines, esta variable reemplaza EMAIL_LOGO_URL.
-# export EMAIL_LOGO_PATH="/ruta/absoluta/logo-comespro.png"
 ```
 
 2. Ejecuta una invocación local con Python:
