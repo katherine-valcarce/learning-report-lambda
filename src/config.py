@@ -1,4 +1,6 @@
 import os
+import base64
+import mimetypes
 from dataclasses import dataclass
 
 from src.exceptions import ValidationError
@@ -23,6 +25,22 @@ def _get_bool_env(name: str, default: str = "false") -> bool:
     return os.getenv(name, default).strip().lower() == "true"
 
 
+def _build_logo_src() -> str:
+    logo_path = (os.getenv("EMAIL_LOGO_PATH") or "").strip()
+    if logo_path:
+        try:
+            with open(logo_path, "rb") as logo_file:
+                encoded = base64.b64encode(logo_file.read()).decode("ascii")
+        except OSError as exc:
+            raise ValidationError(
+                f"No se pudo leer EMAIL_LOGO_PATH='{logo_path}': {exc}"
+            ) from exc
+        mime_type = mimetypes.guess_type(logo_path)[0] or "image/png"
+        return f"data:{mime_type};base64,{encoded}"
+
+    return (os.getenv("EMAIL_LOGO_URL") or "https://i.imgur.com/St19Vpz.png").strip()
+
+
 def get_settings() -> Settings:
     app_env = (os.getenv("APP_ENV") or "dev").strip().lower() or "dev"
     local_test_mode = _get_bool_env("LOCAL_TEST_MODE", default="false")
@@ -35,9 +53,7 @@ def get_settings() -> Settings:
         reports_prefix = "reports"
 
     platform_url = (os.getenv("PLATFORM_URL") or "").strip()
-    email_logo_url = (
-        os.getenv("EMAIL_LOGO_URL") or "https://i.imgur.com/St19Vpz.png"
-    ).strip()
+    email_logo_url = _build_logo_src()
 
     if not local_test_mode:
         missing = [key for key in _REQUIRED_ENV_VARS if not os.getenv(key, "").strip()]
