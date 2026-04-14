@@ -11,6 +11,8 @@ class Settings:
     ses_sender_email: str
     aws_region: str
     reports_prefix: str
+    platform_url: str
+    email_logo_url: str
     local_test_mode: bool
 
 
@@ -32,6 +34,11 @@ def get_settings() -> Settings:
     if not reports_prefix:
         reports_prefix = "reports"
 
+    platform_url = (os.getenv("PLATFORM_URL") or "").strip()
+    email_logo_url = (
+        os.getenv("EMAIL_LOGO_URL") or "https://i.imgur.com/15AZiBa.png"
+    ).strip()
+
     if not local_test_mode:
         missing = [key for key in _REQUIRED_ENV_VARS if not os.getenv(key, "").strip()]
         if missing:
@@ -45,5 +52,7 @@ def get_settings() -> Settings:
         ses_sender_email=ses_sender_email,
         aws_region=aws_region,
         reports_prefix=reports_prefix,
+        platform_url=platform_url,
+        email_logo_url=email_logo_url,
         local_test_mode=local_test_mode,
     )

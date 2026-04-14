@@ -110,6 +110,8 @@ def _handle_aws_output(
     email_service = EmailService(
         sender_email=settings.ses_sender_email,
         region_name=settings.aws_region,
+        platform_url=settings.platform_url,
+        logo_url=settings.email_logo_url,
     )
     pdf_reference = upload_result["pdf_reference"]
     zip_reference = upload_result["zip_reference"]

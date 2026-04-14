@@ -50,6 +50,8 @@ learning-report-lambda/
 - `S3_BUCKET_NAME`: bucket donde se almacenan los PDFs.
 - `SES_SENDER_EMAIL`: remitente de correo en SES.
 - `REPORTS_PREFIX`: prefijo de carpeta en S3. Default: `reports`.
+- `PLATFORM_URL`: URL pública de la plataforma (se muestra en el footer del correo). Default: vacío.
+- `EMAIL_LOGO_URL`: URL del logo usado en la cabecera del correo. Default: `https://i.imgur.com/15AZiBa.png`.
 - `LOCAL_TEST_MODE`: `true`/`false` (en minúscula recomendado). Default: `false`.
 
 ### Reglas de validación
@@ -101,6 +103,8 @@ learning-report-lambda/
 export APP_ENV="dev"
 export LOCAL_TEST_MODE="true"
 export REPORTS_PREFIX="reports"
+export PLATFORM_URL="https://tu-plataforma-dev.com"
+export EMAIL_LOGO_URL="https://i.imgur.com/15AZiBa.png"
 ```
 
 2. Ejecuta una invocación local con Python:
@@ -156,12 +160,16 @@ Durante `sam deploy --guided`, define estos valores:
   - `AppEnv=dev`
   - `S3BucketName=informes-comespro-dev`
   - `SesSenderEmail=dev@tudominio.com`
+  - `PlatformUrl=https://tu-plataforma-dev.com`
+  - `EmailLogoUrl=https://i.imgur.com/15AZiBa.png`
   - `LocalTestMode=false`
 
 - **prod**:
   - `AppEnv=prod`
   - `S3BucketName=informes-comespro-prod`
   - `SesSenderEmail=reportes@tudominio.com`
+  - `PlatformUrl=https://tu-plataforma.com`
+  - `EmailLogoUrl=https://i.imgur.com/15AZiBa.png`
   - `LocalTestMode=false`
 
 También puedes usar `samconfig.toml` para guardar estos parámetros y hacer el despliegue reproducible entre ejecuciones.
