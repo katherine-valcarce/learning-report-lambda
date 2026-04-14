@@ -1,4 +1,5 @@
 version = 0.1
+
 [dev.deploy.parameters]
 stack_name = "learning-report-lambda-dev"
 resolve_s3 = true
@@ -6,5 +7,5 @@ s3_prefix = "learning-report-lambda-dev"
 region = "us-east-1"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "AppEnv=\"dev\" AwsRegion=\"us-east-1\" S3BucketName=\"informes-comespro-dev\" SesSenderEmail=\"contacto@comes.pro\" ReportsPrefix=\"reports\" LocalTestMode=\"false\""
+parameter_overrides = "AppEnv=\"dev\" AwsRegion=\"us-east-1\" S3BucketName=\"informes-comespro-dev\" SesSenderEmail=\"contacto@comes.pro\" ReportsPrefix=\"reports\" PlatformUrl=\"https://dev.d3ppcrn3ec326p.amplifyapp.com\" EmailLogoUrl=\"https://i.imgur.com/St19Vpz.png\" LocalTestMode=\"false\""
 image_repositories = []
