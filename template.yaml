@@ -36,7 +36,7 @@ Parameters:
     Description: ruta relativa del logo de Comes Pro que se mostrará en el encabezado del correo.
   EmailLogoUrl:
     Type: String
-    Default: https://i.imgur.com/St19Vpz.png
+    Default: https://bucket-de-pruebas-cs.s3.us-east-1.amazonaws.com/logoComesPro.png
     Description: URL del logo de Comes Pro que se mostrará en el encabezado del correo.
   LocalTestMode:
     Type: String
