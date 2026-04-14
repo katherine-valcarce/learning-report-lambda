@@ -312,15 +312,15 @@ class PdfGeneratorService:
                     center_radius = 27
                     ring_bg = colors.HexColor("#E5E7EB")
 
-                    # Anillo exterior: cumplimiento verificado
+                    # Anillo exterior: cumplimiento informado
                     outer_pie = Pie()
                     outer_pie.x = ring_center_x - (outer_size / 2)
                     outer_pie.y = ring_center_y - (outer_size / 2)
                     outer_pie.width = outer_size
                     outer_pie.height = outer_size
                     outer_pie.slices.strokeWidth = 0
-                    outer_pie.data = [verified_value, max(0.0, 100.0 - verified_value)]
-                    outer_pie.slices[0].fillColor = colors.HexColor("#059669")
+                    outer_pie.data = [reported_value, max(0.0, 100.0 - reported_value)]
+                    outer_pie.slices[0].fillColor = colors.HexColor("#3b82f6")
                     outer_pie.slices[1].fillColor = ring_bg
                     outer_pie.labels = ["", ""]
                     drawing.add(outer_pie)
@@ -337,15 +337,15 @@ class PdfGeneratorService:
                         )
                     )
 
-                    # Anillo interior: cumplimiento informado
+                    # Anillo interior: cumplimiento verificado
                     inner_pie = Pie()
                     inner_pie.x = ring_center_x - (inner_ring_size / 2)
                     inner_pie.y = ring_center_y - (inner_ring_size / 2)
                     inner_pie.width = inner_ring_size
                     inner_pie.height = inner_ring_size
                     inner_pie.slices.strokeWidth = 0
-                    inner_pie.data = [reported_value, max(0.0, 100.0 - reported_value)]
-                    inner_pie.slices[0].fillColor = colors.HexColor("#3b82f6")
+                    inner_pie.data = [verified_value, max(0.0, 100.0 - verified_value)]
+                    inner_pie.slices[0].fillColor = colors.HexColor("#059669")
                     inner_pie.slices[1].fillColor = ring_bg
                     inner_pie.labels = ["", ""]
                     drawing.add(inner_pie)
@@ -410,8 +410,8 @@ class PdfGeneratorService:
                             )
                         )
 
-                    draw_ring_badge(outer_label_x, outer_label_y, verified_value)
-                    draw_ring_badge(inner_label_x, inner_label_y, reported_value)
+                    draw_ring_badge(outer_label_x, outer_label_y, reported_value)
+                    draw_ring_badge(inner_label_x, inner_label_y, verified_value)
 
                     renderPDF.draw(drawing, pdf, self.margin_x, chart_top - chart_h)
 
