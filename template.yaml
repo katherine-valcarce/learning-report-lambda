@@ -26,6 +26,14 @@ Parameters:
     Type: String
     Default: reports
     Description: Prefijo de carpeta para reportes en S3.
+  PlatformUrl:
+    Type: String
+    Default: ""
+    Description: URL pública de la plataforma para incluir en el pie del correo.
+  EmailLogoUrl:
+    Type: String
+    Default: https://i.imgur.com/15AZiBa.png
+    Description: URL del logo de Comes Pro que se mostrará en el encabezado del correo.
   LocalTestMode:
     Type: String
     Default: "false"
@@ -53,6 +61,8 @@ Resources:
           S3_BUCKET_NAME: !Ref S3BucketName
           SES_SENDER_EMAIL: !Ref SesSenderEmail
           REPORTS_PREFIX: !Ref ReportsPrefix
+          PLATFORM_URL: !Ref PlatformUrl
+          EMAIL_LOGO_URL: !Ref EmailLogoUrl
           LOCAL_TEST_MODE: !Ref LocalTestMode
       Policies:
         - AWSLambdaBasicExecutionRole
