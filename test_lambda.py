@@ -7,6 +7,7 @@ os.environ["LOCAL_TEST_MODE"] = "true"
 event = {
     "request_id": "test-123",
     "requested_by": {
+        "id_user": "user-123",
         "name": "Kathy",
         "email": "test@test.com",
     },
@@ -29,7 +30,7 @@ event = {
             "checker_files": [
                 {
                     "file_name": "politica-ambiental.pdf",
-                    "file_url": "https://example.com/politica-ambiental.pdf",
+                    "file_url": "data:text/plain;base64,dmVyaWZpY2Fkb3I=",
                 }
             ],
         },

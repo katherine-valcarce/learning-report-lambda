@@ -14,30 +14,52 @@ class S3Service:
         self.reports_prefix = reports_prefix.strip("/")
         self.client = boto3.client("s3", region_name=region_name)
 
-    def _build_key(self, supplier_id: str) -> str:
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        return f"{self.reports_prefix}/{supplier_id}/report-{timestamp}.pdf"
+    def _build_base_folder(self, supplier_id: str, user_id: str) -> str:
+        return f"{self.reports_prefix}/{supplier_id}/{user_id}"
 
-    def upload_pdf(self, *, supplier_id: str, pdf_buffer: BytesIO) -> dict[str, str]:
-        key = self._build_key(supplier_id)
-        try:
-            self.client.upload_fileobj(
-                Fileobj=pdf_buffer,
-                Bucket=self.bucket_name,
-                Key=key,
-                ExtraArgs={"ContentType": "application/pdf"},
-            )
-            s3_uri = f"s3://{self.bucket_name}/{key}"
-            presigned_url = self.client.generate_presigned_url(
+    def _build_file_keys(self, supplier_id: str, user_id: str) -> tuple[str, str]:
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        base_folder = self._build_base_folder(supplier_id, user_id)
+        pdf_key = f"{base_folder}/report-{timestamp}.pdf"
+        zip_key = f"{base_folder}/report-package-{timestamp}.zip"
+        return pdf_key, zip_key
+
+    def _upload_file(self, file_buffer: BytesIO, key: str, content_type: str) -> dict[str, str]:
+        file_buffer.seek(0)
+        self.client.upload_fileobj(
+            Fileobj=file_buffer,
+            Bucket=self.bucket_name,
+            Key=key,
+            ExtraArgs={"ContentType": content_type},
+        )
+        return {
+            "bucket": self.bucket_name,
+            "key": key,
+            "s3_uri": f"s3://{self.bucket_name}/{key}",
+            "presigned_url": self.client.generate_presigned_url(
                 "get_object",
                 Params={"Bucket": self.bucket_name, "Key": key},
                 ExpiresIn=86400,
-            )
+            ),
+        }
+
+    def upload_report_assets(
+        self,
+        *,
+        supplier_id: str,
+        user_id: str,
+        pdf_buffer: BytesIO,
+        zip_buffer: BytesIO,
+    ) -> dict[str, dict[str, str] | str]:
+        pdf_key, zip_key = self._build_file_keys(supplier_id=supplier_id, user_id=user_id)
+
+        try:
+            pdf_result = self._upload_file(pdf_buffer, pdf_key, "application/pdf")
+            zip_result = self._upload_file(zip_buffer, zip_key, "application/zip")
             return {
-                "bucket": self.bucket_name,
-                "key": key,
-                "s3_uri": s3_uri,
-                "presigned_url": presigned_url,
+                "folder": self._build_base_folder(supplier_id=supplier_id, user_id=user_id),
+                "pdf": pdf_result,
+                "zip": zip_result,
             }
         except (ClientError, BotoCoreError) as exc:
-            raise StorageError(f"Error al subir PDF a S3: {exc}") from exc
+            raise StorageError(f"Error al subir activos del informe a S3: {exc}") from exc

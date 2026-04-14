@@ -25,6 +25,7 @@ def validate_event_payload(event: Any) -> dict[str, Any]:
     if not isinstance(requested_by, dict):
         raise ValidationError("requested_by es obligatorio y debe ser objeto")
 
+    _required_str(requested_by, "id_user", "requested_by.id_user")
     _required_str(requested_by, "name", "requested_by.name")
     email = _required_str(requested_by, "email", "requested_by.email")
     if not _EMAIL_REGEX.match(email):

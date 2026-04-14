@@ -11,6 +11,7 @@ from src.exceptions import (
 from src.services.email_service import EmailService
 from src.services.pdf_generator_service import PdfGeneratorService
 from src.services.s3_service import S3Service
+from src.services.zip_service import ZipService
 from src.utils.logger import get_logger
 from src.utils.validators import validate_event_payload
 
@@ -53,7 +54,12 @@ def _build_error_response(status_code: int, message: str, error: str) -> dict[st
     }
 
 
-def _handle_local_output(pdf_buffer: Any, request_id: str, metrics: dict[str, int]) -> dict[str, Any]:
+def _handle_local_output(
+    pdf_buffer: Any,
+    zip_buffer: Any,
+    request_id: str,
+    metrics: dict[str, int],
+) -> dict[str, Any]:
     output_dir = "local_output"
     os.makedirs(output_dir, exist_ok=True)
 
@@ -61,13 +67,19 @@ def _handle_local_output(pdf_buffer: Any, request_id: str, metrics: dict[str, in
     with open(pdf_path, "wb") as file:
         file.write(pdf_buffer.getvalue())
 
+    zip_path = os.path.join(output_dir, f"report-package-{request_id}.zip")
+    with open(zip_path, "wb") as file:
+        file.write(zip_buffer.getvalue())
+
     logger.info("PDF generado localmente en %s", pdf_path)
+    logger.info("ZIP generado localmente en %s", zip_path)
 
     response = _build_base_response(request_id=request_id, metrics=metrics)
     response.update(
         {
-            "message": "PDF generado localmente, sin S3 ni SES",
+            "message": "PDF y ZIP generados localmente, sin S3 ni SES",
             "local_pdf_path": pdf_path,
+            "local_zip_path": zip_path,
         }
     )
     return response
@@ -75,6 +87,7 @@ def _handle_local_output(pdf_buffer: Any, request_id: str, metrics: dict[str, in
 
 def _handle_aws_output(
     pdf_buffer: Any,
+    zip_buffer: Any,
     request_id: str,
     supplier: dict[str, Any],
     requester: dict[str, Any],
@@ -87,34 +100,37 @@ def _handle_aws_output(
         region_name=settings.aws_region,
         reports_prefix=settings.reports_prefix,
     )
-    upload_result = s3_service.upload_pdf(
+    upload_result = s3_service.upload_report_assets(
         supplier_id=supplier["id_supplier"],
+        user_id=requester["id_user"],
         pdf_buffer=pdf_buffer,
+        zip_buffer=zip_buffer,
     )
 
     email_service = EmailService(
         sender_email=settings.ses_sender_email,
         region_name=settings.aws_region,
     )
+    zip_reference = upload_result["zip"].get("presigned_url") or upload_result["zip"]["s3_uri"]
     email_response = email_service.send_report_ready_email(
         recipient_name=requester["name"],
         recipient_email=requester["email"],
         supplier_name=supplier["business_name"],
         request_id=request_id,
-        report_reference=upload_result.get("presigned_url") or upload_result["s3_uri"],
+        zip_reference=zip_reference,
     )
 
     logger.info(
-        "Proceso completado request_id=%s, s3_uri=%s, email_message_id=%s",
+        "Proceso completado request_id=%s, zip_s3_uri=%s, email_message_id=%s",
         request_id,
-        upload_result["s3_uri"],
+        upload_result["zip"]["s3_uri"],
         email_response.get("MessageId"),
     )
 
     response = _build_base_response(request_id=request_id, metrics=metrics)
     response.update(
         {
-            "message": "Informe generado y notificado correctamente",
+            "message": "Informe y paquete ZIP generados y notificados correctamente",
             "report": upload_result,
         }
     )
@@ -142,10 +158,17 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         pdf_service = PdfGeneratorService()
         pdf_buffer = pdf_service.generate(payload, metrics)
 
+        zip_service = ZipService()
+        zip_buffer = zip_service.generate_report_package(
+            pdf_buffer=pdf_buffer,
+            criteria=payload["criteria"],
+        )
+
         if settings.local_test_mode or _is_local_test_mode():
             logger.info("Lambda ejecutándose en modo local")
             return _handle_local_output(
                 pdf_buffer=pdf_buffer,
+                zip_buffer=zip_buffer,
                 request_id=request_id,
                 metrics=metrics,
             )
@@ -153,6 +176,7 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         logger.info("Lambda ejecutándose en modo AWS")
         return _handle_aws_output(
             pdf_buffer=pdf_buffer,
+            zip_buffer=zip_buffer,
             request_id=request_id,
             supplier=supplier,
             requester=requester,
