@@ -36,7 +36,7 @@ def get_settings() -> Settings:
 
     platform_url = (os.getenv("PLATFORM_URL") or "").strip()
     email_logo_url = (
-        os.getenv("EMAIL_LOGO_URL") or "https://i.imgur.com/15AZiBa.png"
+        os.getenv("EMAIL_LOGO_URL") or "https://i.imgur.com/St19Vpz.png"
     ).strip()
 
     if not local_test_mode:
