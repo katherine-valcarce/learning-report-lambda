@@ -30,10 +30,6 @@ Parameters:
     Type: String
     Default: https://dev.d3ppcrn3ec326p.amplifyapp.com
     Description: URL pública de la plataforma para incluir en el pie del correo.
-  EmailLogoPath:
-    Type: String
-    Default: logoComesPro.png
-    Description: ruta relativa del logo de Comes Pro que se mostrará en el encabezado del correo.
   EmailLogoUrl:
     Type: String
     Default: https://bucket-de-pruebas-cs.s3.us-east-1.amazonaws.com/logoComesPro.png
@@ -68,7 +64,6 @@ Resources:
           PLATFORM_URL: !Ref PlatformUrl
           EMAIL_LOGO_URL: !Ref EmailLogoUrl
           LOCAL_TEST_MODE: !Ref LocalTestMode
-          EMAIL_LOGO_PATH: !Ref EmailLogoPath
       Policies:
         - AWSLambdaBasicExecutionRole
         - Statement:
