@@ -10,7 +10,7 @@ class EmailService:
         sender_email: str,
         region_name: str,
         platform_url: str = "",
-        logo_url: str = "https://i.imgur.com/15AZiBa.png",
+        logo_url: str = "https://i.imgur.com/St19Vpz.png",
     ) -> None:
         self.sender_email = sender_email
         self.sender_name = "ComesPro"
@@ -52,18 +52,27 @@ class EmailService:
             ]
         )
 
-        platform_link_html = ""
-        if self.platform_url:
-            platform_link_html = f"""
-            <div style=\"background: #F8F9FA; padding: 22px 20px; text-align: center; font-size: 14px; color: #666666;\">
-              ¿Quieres tener mayor información?<br />
-              Ingresa a la plataforma <strong>E-learning Comes Pro</strong><br /><br />
+        platform_link_cta_html = (
+            f"""
               <a
                 href=\"{self.platform_url}\"
                 style=\"color: #2EBC85; text-decoration: none; font-weight: 600;\"
               >
                 Ir a la plataforma →
               </a>
+            """
+            if self.platform_url
+            else """
+              <span style=\"color: #999999; font-style: italic;\">
+                URL de plataforma no configurada
+              </span>
+            """
+        )
+        platform_link_html = f"""
+            <div style=\"background: #F8F9FA; padding: 22px 20px; text-align: center; font-size: 14px; color: #666666;\">
+              ¿Quieres tener mayor información?<br />
+              Ingresa a la plataforma <strong>E-learning Comes Pro</strong><br /><br />
+              {platform_link_cta_html}
             </div>
             """
 
