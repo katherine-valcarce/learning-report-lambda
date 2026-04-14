@@ -28,11 +28,11 @@ Parameters:
     Description: Prefijo de carpeta para reportes en S3.
   PlatformUrl:
     Type: String
-    Default: ""
+    Default: https://dev.d3ppcrn3ec326p.amplifyapp.com
     Description: URL pública de la plataforma para incluir en el pie del correo.
   EmailLogoUrl:
     Type: String
-    Default: https://i.imgur.com/15AZiBa.png
+    Default: https://i.imgur.com/St19Vpz.png
     Description: URL del logo de Comes Pro que se mostrará en el encabezado del correo.
   LocalTestMode:
     Type: String
