@@ -8,6 +8,9 @@ from urllib.request import urlopen
 import zipfile
 
 from src.exceptions import StorageError
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class CheckerFileDownloader:
@@ -43,6 +46,8 @@ class ZipService:
         pdf_name: str = "informe.pdf",
     ) -> BytesIO:
         zip_buffer = BytesIO()
+        downloaded_count = 0
+        failed_count = 0
 
         try:
             with zipfile.ZipFile(zip_buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zip_file:
@@ -51,9 +56,25 @@ class ZipService:
                 for checker_file in self._iter_checker_files(criteria):
                     file_name = checker_file["file_name"].strip()
                     file_url = checker_file["file_url"].strip()
-                    downloaded_content = self.downloader.download(file_url)
-                    zip_path = self._build_checker_zip_path(file_name)
-                    zip_file.writestr(zip_path, downloaded_content)
+                    try:
+                        downloaded_content = self.downloader.download(file_url)
+                        zip_path = self._build_checker_zip_path(file_name)
+                        zip_file.writestr(zip_path, downloaded_content)
+                        downloaded_count += 1
+                    except StorageError as exc:
+                        failed_count += 1
+                        logger.warning(
+                            "No se pudo descargar checker_file file_name=%s file_url=%s error=%s",
+                            file_name,
+                            file_url,
+                            exc,
+                        )
+
+            logger.info(
+                "ZIP generado con verificadores descargados=%s fallidos=%s",
+                downloaded_count,
+                failed_count,
+            )
 
             zip_buffer.seek(0)
             return zip_buffer

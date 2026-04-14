@@ -56,10 +56,14 @@ class S3Service:
         try:
             pdf_result = self._upload_file(pdf_buffer, pdf_key, "application/pdf")
             zip_result = self._upload_file(zip_buffer, zip_key, "application/zip")
+            pdf_reference = pdf_result.get("presigned_url") or pdf_result["s3_uri"]
+            zip_reference = zip_result.get("presigned_url") or zip_result["s3_uri"]
             return {
                 "folder": self._build_base_folder(supplier_id=supplier_id, user_id=user_id),
                 "pdf": pdf_result,
                 "zip": zip_result,
+                "pdf_reference": pdf_reference,
+                "zip_reference": zip_reference,
             }
         except (ClientError, BotoCoreError) as exc:
             raise StorageError(f"Error al subir activos del informe a S3: {exc}") from exc
