@@ -9,3 +9,12 @@ confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = "AppEnv=\"dev\" AwsRegion=\"us-east-1\" S3BucketName=\"informes-comespro-dev\" SesSenderEmail=\"contacto@comes.pro\" ReportsPrefix=\"reports\" PlatformUrl=\"https://dev.d3ppcrn3ec326p.amplifyapp.com\" EmailLogoUrl=\"https://i.imgur.com/St19Vpz.png\" LocalTestMode=\"false\""
 image_repositories = []
+[prod.deploy.parameters]
+stack_name = "learning-report-lambda-prod"
+resolve_s3 = true
+s3_prefix = "learning-report-lambda-prod"
+region = "us-east-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "AppEnv=\"prod\" AwsRegion=\"us-east-1\" S3BucketName=\"informes-comespro-prod\" SesSenderEmail=\"contacto@comes.pro\" ReportsPrefix=\"reports\" PlatformUrl=\"https://portal.comes.pro\" EmailLogoUrl=\"https://bucket-de-pruebas-cs.s3.us-east-1.amazonaws.com/logoComesPro.png\" LocalTestMode=\"false\""
+image_repositories = []
