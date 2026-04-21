@@ -6,6 +6,21 @@ from src.exceptions import ValidationError
 _EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _VALID_COMPLIANCE = {"Tiene", "No tiene"}
 _VALID_COUNTRY_CODES = {"CHL", "PER", "ARG"}
+_COMPLIANCE_ALIASES = {
+    "tiene": "Tiene",
+    "cumple": "Tiene",
+    "si": "Tiene",
+    "sí": "Tiene",
+    "true": "Tiene",
+    "1": "Tiene",
+    "no tiene": "No tiene",
+    "no_tiene": "No tiene",
+    "nocumple": "No tiene",
+    "no cumple": "No tiene",
+    "no": "No tiene",
+    "false": "No tiene",
+    "0": "No tiene",
+}
 
 
 def _required_str(data: dict[str, Any], field: str, label: str) -> str:
@@ -13,6 +28,23 @@ def _required_str(data: dict[str, Any], field: str, label: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValidationError(f"{label} es obligatorio y debe ser string no vacío")
     return value.strip()
+
+
+def _normalize_compliance(raw_value: Any) -> str | None:
+    if raw_value in _VALID_COMPLIANCE:
+        return raw_value
+
+    if isinstance(raw_value, bool):
+        return "Tiene" if raw_value else "No tiene"
+
+    if isinstance(raw_value, (int, float)) and raw_value in (0, 1):
+        return "Tiene" if raw_value == 1 else "No tiene"
+
+    if not isinstance(raw_value, str):
+        return None
+
+    normalized = " ".join(raw_value.strip().lower().split())
+    return _COMPLIANCE_ALIASES.get(normalized)
 
 
 def validate_event_payload(event: Any) -> dict[str, Any]:
@@ -69,10 +101,12 @@ def validate_event_payload(event: Any) -> dict[str, Any]:
         if not isinstance(item["title"], str) or not item["title"].strip():
             raise ValidationError(f"criteria[{idx}].title debe ser string no vacío")
 
-        if item["compliance"] not in _VALID_COMPLIANCE:
+        normalized_compliance = _normalize_compliance(item["compliance"])
+        if normalized_compliance is None:
             raise ValidationError(
-                f"criteria[{idx}].compliance debe ser 'Tiene' o 'No tiene'"
+                f"criteria[{idx}].compliance debe ser 'Tiene' o 'No tiene' (valor recibido: {item['compliance']!r})"
             )
+        item["compliance"] = normalized_compliance
 
         if not isinstance(item["is_verified"], bool):
             raise ValidationError(f"criteria[{idx}].is_verified debe ser booleano")
