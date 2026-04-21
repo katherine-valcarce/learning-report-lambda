@@ -20,6 +20,10 @@ _COMPLIANCE_ALIASES = {
     "no": "No tiene",
     "false": "No tiene",
     "0": "No tiene",
+    "en proceso": "No tiene",
+    "en_proceso": "No tiene",
+    "pendiente": "No tiene",
+    "in progress": "No tiene",
 }
 
 
