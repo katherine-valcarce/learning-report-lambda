@@ -40,7 +40,7 @@ Resources:
     Properties:
       FunctionName: !Sub learning-report-lambda-${AppEnv}
       Description: !Sub Lambda de generación de informes (${AppEnv})
-      Runtime: python3.11
+      Runtime: python3.10
       Handler: src.handler.lambda_handler
       CodeUri: .
       Timeout: 60
