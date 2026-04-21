@@ -54,6 +54,29 @@ def _build_error_response(status_code: int, message: str, error: str) -> dict[st
     }
 
 
+def _build_event_preview(event: Any) -> dict[str, Any]:
+    if not isinstance(event, dict):
+        return {"event_type": str(type(event))}
+
+    criteria = event.get("criteria")
+    criteria_compliance = []
+    if isinstance(criteria, list):
+        for item in criteria[:5]:
+            if isinstance(item, dict):
+                criteria_compliance.append(item.get("compliance"))
+            else:
+                criteria_compliance.append(str(type(item)))
+
+    return {
+        "request_id": event.get("request_id"),
+        "supplier_id": event.get("supplier", {}).get("id_supplier")
+        if isinstance(event.get("supplier"), dict)
+        else None,
+        "criteria_count": len(criteria) if isinstance(criteria, list) else None,
+        "criteria_compliance_sample": criteria_compliance,
+    }
+
+
 def _handle_local_output(
     pdf_buffer: Any,
     zip_buffer: Any,
@@ -144,6 +167,7 @@ def _handle_aws_output(
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     logger.info("Inicio de procesamiento de informe")
+    logger.info("Payload recibido (resumen): %s", _build_event_preview(event))
 
     try:
         settings = get_settings()
